@@ -43,7 +43,7 @@ def print_dict(data):
         print(f"{key}: {value}")
 
 def main():
-    TitanicData=read_csv_file('titanic-homework.csv')
+    TitanicData=read_csv_file('data\\titanic-homework.csv')
     TitanicDataNameDict=create_dict(TitanicData)
     #PassengerId,Pclass,Name,Sex,Age,SibSp,Parch,Survived
     TitanicDataPclassDict=create_dict(TitanicData,key='Pclass')
