@@ -27,14 +27,19 @@ def entropy(probabilities):
     entropy = 0
     for p in probabilities:
         if p != 0:
-            entropy -= p * math.log2(p)
-    return entropy
+            entropy += p * math.log2(p)
+    return -entropy
 
 def information_gain(parent, children):
     parent_entropy = entropy(parent)
+    # print(f"Parent entropy: {parent_entropy}")
     children_entropy = 0
     for child in children:
-        children_entropy += entropy(child) * sum(child)
+        for i in range(len(child)):
+            child[i] =child[i]/100
+            
+        children_entropy += entropy(child)
+    # print(f"Children entropy: {children_entropy}")
     return parent_entropy - children_entropy
 
 
@@ -42,23 +47,46 @@ def print_dict(data):
     for key, value in data.items():
         print(f"{key}: {value}")
 
+
+def get_best_attribute(data): #naprawic
+    
+    best_attribute = None
+    best_entropy = float('inf')
+    for key in data[0].keys():
+        if key == 'Name' or key == 'Survived' or key == 'PassengerId':
+            continue
+        attribute_dict = create_dict(data, key)
+        attribute_table = create_table(attribute_dict)
+        ig = information_gain(attribute_table, [attribute_table, [1 - x for x in attribute_table]])
+        if ig > best_entropy:
+            best_entropy = ig
+            best_attribute = key
+        print(f"Information gain for {key} is {ig}")
+    return best_attribute
+
+def remove_attribute(data, attribute):
+    for row in data:
+        del row[attribute]
+    return data
+
 def main():
     TitanicData=read_csv_file('data\\titanic-homework.csv')
-    TitanicDataNameDict=create_dict(TitanicData)
-    #PassengerId,Pclass,Name,Sex,Age,SibSp,Parch,Survived
-    TitanicDataPclassDict=create_dict(TitanicData,key='Pclass')
-    TitanicDataNameDict=create_dict(TitanicData,key='Name')
-    TitanicDataSexDict=create_dict(TitanicData,key='Sex')
-    TitanicDataSexTable=create_table(TitanicDataSexDict)
-    TitanicDataAgeDict=create_dict(TitanicData,key='Age')
-    TitanicDataSibSpDict=create_dict(TitanicData,key='SibSp')
-    TitanicDataParchDict=create_dict(TitanicData,key='Parch')
-    TitanicDataSurvivedDict=create_dict(TitanicData,key='Survived')
-    # print_dict(TitanicDataNameDict)
-    print(TitanicDataSexTable)
-    
-    print(entropy(TitanicDataSexTable))
 
+    for i in range(100):
+        if TitanicData[i]['Age'] <='20':
+            TitanicData[i]['Age'] = 'young'
+            continue
+        if TitanicData[i]['Age'] <='40':
+            TitanicData[i]['Age'] = 'middle'
+            continue
+        TitanicData[i]['Age'] = 'old'
+
+    for i in range(5):
+        best=get_best_attribute(TitanicData)
+        print(best)
+        # print_dict(create_dict(TitanicData,best))
+        remove_attribute(TitanicData,best)
+    
 
 
 main()
