@@ -1,5 +1,21 @@
 import math
 import csv
+import treelib
+import sys
+
+class TreeNode:
+
+    def __init__(self, key, attr_value, rows, parent=None):
+        self.key = key
+        self.attr_value = attr_value
+        self.rows = rows
+
+        self.parent = parent
+        self.children = []
+
+        self.num = 0
+
+
 
 def read_csv_file(file_path):
     with open(file_path, 'r') as csv_file:
@@ -90,8 +106,8 @@ def get_yes_no_prob(list, decision_attr,datacount):
     
 
 def main():
-    TitanicData=read_csv_file('data\\LabExe.csv')
-    # TitanicData=read_csv_file('data\\titanic-homework.csv')
+    # TitanicData=read_csv_file('..\\data\\LabExe.csv')
+    TitanicData=read_csv_file('..\\data\\titanic-homework.csv')
 
     for i in range(len(TitanicData)):
         if TitanicData[i]['Age'] <='20':
@@ -102,27 +118,81 @@ def main():
             continue
         TitanicData[i]['Age'] = 'old'
 
-    mainentropy = entropy(get_decision_prob(TitanicData, "Survived"))
-    print("Main entropy: ",mainentropy," Probabiltes: ",get_decision_prob(TitanicData, "Survived"))
 
-    for key in TitanicData[0].keys():
-        if key == 'Name' or key == 'Survived' or key == 'PassengerId':
-            continue
-        # if key == 'Sex':
-        lists = split_list_by_attr(TitanicData, key)
-        print(key+":")
-        entropiesforkey=[]
-        decistions = []
-        for a in lists:
-            # print(a[0], get_decision_prob(a[1], "Survived"))
-            # print(a[0],entropy(get_decision_prob(a[1], "Survived")))
-            entropiesforkey.append(entropy(get_decision_prob(a[1], "Survived")))
-            for dec in get_yes_no_prob(a[1], key,len(TitanicData)):
-                decistions.append(dec)
-        print("Entropy: ",entropiesforkey)
-        print("Decisions: ",decistions)
-        print("Conditional entropy: ",conditional_entropy(entropiesforkey,decistions))
-        print("Information gain for ",key,": ",information_gain(mainentropy,conditional_entropy(entropiesforkey,decistions)),"\n")
+    decision_attribute = "Survived"
+    skip_attributes = ("Name", "PassengerId", decision_attribute)
+
+    tree = TreeNode("titanic", "", TitanicData)
+
+    nodes_to_expand = [tree]
+
+    while len(nodes_to_expand) > 0:
+        node = nodes_to_expand.pop()
+
+        mainentropy = entropy(get_decision_prob(node.rows, decision_attribute))
+        # print("Main entropy: ",mainentropy," Probabiltes: ",get_decision_prob(TitanicData, "Survived"))
+
+        best_gain = 0
+        best_key = ""
+        best_lists = []
+
+        for key in node.rows[0].keys():
+            if key in skip_attributes:
+                continue
+            lists = split_list_by_attr(node.rows, key)
+            # print(key+":")
+            entropiesforkey=[]
+            decistions = []
+            for (attr_val, list) in lists:
+                # print(a[0], get_decision_prob(a[1], "Survived"))
+                # print(a[0],entropy(get_decision_prob(a[1], "Survived")))
+                entropiesforkey.append(entropy(get_decision_prob(list , decision_attribute)))
+                decistions.append(len(list) / len(node.rows))
+            
+            cond_entropy = conditional_entropy(entropiesforkey,decistions)
+            inf_gain = information_gain(mainentropy, cond_entropy)
+
+            if(inf_gain >= best_gain):
+                best_gain = inf_gain
+                best_key = key
+                best_lists = lists
+
+            # print("Entropy: ",entropiesforkey)
+            # print("Decisions: ",decistions)
+            # print("Conditional entropy: ",conditional_entropy(entropiesforkey,decistions))
+            # print("Information gain for ",key,": ",information_gain(mainentropy,conditional_entropy(entropiesforkey,decistions)),"\n")
+        
+        for (attr_val, list) in best_lists:
+            rows = remove_attribute(list, best_key)
+
+            if len(get_decision_prob(list, decision_attribute)) == 1 :
+                node_child = TreeNode(best_key, attr_val, None, node)
+                decision_node = TreeNode("decission",list[0][decision_attribute], None, node_child)
+                node.children.append(node_child)
+                node_child.children.append(decision_node)
+            else:
+                node_child = TreeNode(best_key, attr_val, rows, node)
+                nodes_to_expand.append(node_child)
+                node.children.append(node_child)
+
+    
+    display_tree = treelib.Tree()
+
+    display_tree.add_node(treelib.Node(f"{tree.key}:{tree.attr_value}", 1), None)
+    tree.num = 1
+
+    nodes_to_display = tree.children
+
+    num = 2
+    while len(nodes_to_display) >  0:
+        
+        node = nodes_to_display.pop()
+        display_tree.add_node(treelib.Node(f"{node.key}:{node.attr_value}", num), node.parent.num)
+        node.num = num
+        num += 1
+        nodes_to_display.extend(node.children)
+
+    display_tree.save2file("tree")
 
     # for i in range(5):
     #     best=get_best_attribute(TitanicData)
