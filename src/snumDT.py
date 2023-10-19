@@ -58,7 +58,7 @@ def get_best_attribute(data): #naprawic
         attribute_dict = create_dict(data, key)
         attribute_table = create_table(attribute_dict)
         ig = information_gain(attribute_table, [attribute_table, [1 - x for x in attribute_table]])
-        if ig > best_entropy:
+        if ig < best_entropy:
             best_entropy = ig
             best_attribute = key
         print(f"Information gain for {key} is {ig}")
@@ -69,8 +69,33 @@ def remove_attribute(data, attribute):
         del row[attribute]
     return data
 
+def filter_list_by_attr_value(list, attr, value):
+    return [row for row in list if row[attr] == value]
+
+def split_list_by_attr(list, attr):
+    distinct_values = set([row[attr] for row in list])
+
+    lists = []
+
+    for value in distinct_values:
+        lists.append((value, [row for row in list if row[attr] == value]))
+
+    return lists    
+
+def get_decision_prob(list, decision_attr):
+    decision_classes = set([row[decision_attr] for row in list])
+
+    probabilities = []
+
+    for decision_class in decision_classes:
+        count = sum(1 for row in list if row[decision_attr] == decision_class)
+        probabilities.append(count / len(list))
+
+    return probabilities
+    
+
 def main():
-    TitanicData=read_csv_file('data\\titanic-homework.csv')
+    TitanicData=read_csv_file('..\\data\\titanic-homework.csv')
 
     for i in range(100):
         if TitanicData[i]['Age'] <='20':
@@ -81,11 +106,18 @@ def main():
             continue
         TitanicData[i]['Age'] = 'old'
 
-    for i in range(5):
-        best=get_best_attribute(TitanicData)
-        print(best)
-        # print_dict(create_dict(TitanicData,best))
-        remove_attribute(TitanicData,best)
+    print(get_decision_prob(TitanicData, "Survived"))
+
+    lists = split_list_by_attr(TitanicData, "Sex")
+
+    for a in lists:
+        print(a[0], get_decision_prob(a[1], "Survived"))
+
+    # for i in range(5):
+    #     best=get_best_attribute(TitanicData)
+    #     print(best)
+    #     # print_dict(create_dict(TitanicData,best))
+    #     remove_attribute(TitanicData,best)
     
 
 
