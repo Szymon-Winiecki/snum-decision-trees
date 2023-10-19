@@ -30,6 +30,12 @@ def entropy(probabilities):
             entropy += p * math.log2(p)
     return -entropy
 
+def conditional_entropy(entropies,probabilities):
+    conditionalentropy = 0
+    for p in range(len(probabilities)):
+        conditionalentropy += probabilities[p] * entropies[p]
+    return conditionalentropy
+
 def information_gain(parent, children):
     parent_entropy = entropy(parent)
     # print(f"Parent entropy: {parent_entropy}")
@@ -95,7 +101,7 @@ def get_decision_prob(list, decision_attr):
     
 
 def main():
-    TitanicData=read_csv_file('..\\data\\titanic-homework.csv')
+    TitanicData=read_csv_file('data\\titanic-homework.csv')
 
     for i in range(100):
         if TitanicData[i]['Age'] <='20':
@@ -106,12 +112,21 @@ def main():
             continue
         TitanicData[i]['Age'] = 'old'
 
-    print(get_decision_prob(TitanicData, "Survived"))
+    mainentropy = entropy(create_table(create_dict(TitanicData,'Survived')))
+    print("Main entropy: ",mainentropy)
 
-    lists = split_list_by_attr(TitanicData, "Sex")
-
-    for a in lists:
-        print(a[0], get_decision_prob(a[1], "Survived"))
+    for key in TitanicData[0].keys():
+        if key == 'Name' or key == 'Survived' or key == 'PassengerId':
+            continue
+        lists = split_list_by_attr(TitanicData, key)
+        print(key+" entropy:")
+        entropies=[]
+        for a in lists:
+            print(a[0], get_decision_prob(a[1], "Survived"))
+            print(a[0],entropy(get_decision_prob(a[1], "Survived")))
+            entropies.append(entropy(get_decision_prob(a[1], "Survived")))
+        # print("Conditional entropy: ")
+        # print(conditional_entropy(entropies,))
 
     # for i in range(5):
     #     best=get_best_attribute(TitanicData)
