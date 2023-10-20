@@ -24,21 +24,7 @@ def read_csv_file(file_path):
         for row in reader:
             rows.append(row)
         return rows
-    
-def create_dict(rows,key='Name'):
-    result = {}
-    for row in rows:
-        if row[key] not in result:
-            result[row[key]] = 0
-        result[row[key]] +=1
-    return result
-
-def create_table(data):
-    table = []
-    for key, value in data.items():
-        table.append(value/len(data.values()))
-    return table
-    
+        
 def entropy(probabilities):
     entropy = 0
     for p in probabilities:
@@ -57,12 +43,6 @@ def conditional_entropy(entropies,probabilities):
 def information_gain(parententropy, childrenentropy):
     return  parententropy - childrenentropy
     
-
-def print_dict(data):
-    for key, value in data.items():
-        print(f"{key}: {value}")
-
-
 def remove_attribute(data, attribute):
     for row in data:
         del row[attribute]
@@ -102,12 +82,22 @@ def get_yes_no_prob(list, decision_attr,datacount):
 
     return decisions
 
+def intrinsic_info(decisions):
+    intrinsicinfo = 0
+    for d in decisions:
+        if d == 1 or d == 0:
+            return 0
+        if d != 0:
+            intrinsicinfo += d * math.log2(d)
+    return -intrinsicinfo
 
-    
+def gain_ratio(informationgain,informationratio):
+    return informationgain/informationratio
 
 def main():
-    # TitanicData=read_csv_file('..\\data\\LabExe.csv')
-    TitanicData=read_csv_file('..\\data\\titanic-homework.csv')
+    # TitanicData=read_csv_file('data\\LabExe.csv')
+    TitanicData=read_csv_file('data\\titanic-homework.csv')
+    # TitanicData=read_csv_file('data\\laborkiP.csv')
 
     for i in range(len(TitanicData)):
         if TitanicData[i]['Age'] <='20':
@@ -119,9 +109,11 @@ def main():
         TitanicData[i]['Age'] = 'old'
 
 
-    decision_attribute = "Survived"
-    skip_attributes = ("Name", "PassengerId", decision_attribute)
+    # decision_attribute = "decision"
+    # skip_attributes = ("ID", decision_attribute)
 
+    decision_attribute = "Survived"
+    skip_attributes = ("Name","PassengerId", decision_attribute)
     tree = TreeNode("titanic", "", TitanicData)
 
     nodes_to_expand = [tree]
@@ -130,7 +122,6 @@ def main():
         node = nodes_to_expand.pop()
 
         mainentropy = entropy(get_decision_prob(node.rows, decision_attribute))
-        # print("Main entropy: ",mainentropy," Probabiltes: ",get_decision_prob(TitanicData, "Survived"))
 
         best_gain = 0
         best_key = ""
@@ -140,28 +131,29 @@ def main():
             if key in skip_attributes:
                 continue
             lists = split_list_by_attr(node.rows, key)
-            # print(key+":")
             entropiesforkey=[]
             decistions = []
             for (attr_val, list) in lists:
-                # print(a[0], get_decision_prob(a[1], "Survived"))
-                # print(a[0],entropy(get_decision_prob(a[1], "Survived")))
                 entropiesforkey.append(entropy(get_decision_prob(list , decision_attribute)))
                 decistions.append(len(list) / len(node.rows))
             
             cond_entropy = conditional_entropy(entropiesforkey,decistions)
             inf_gain = information_gain(mainentropy, cond_entropy)
+            info_ratio=intrinsic_info(decistions)
+            gain_rat=gain_ratio(inf_gain,info_ratio)
 
-            if(inf_gain >= best_gain):
-                best_gain = inf_gain
+            if(gain_rat >= best_gain):
+                best_gain = gain_rat
                 best_key = key
                 best_lists = lists
-
-            # print("Entropy: ",entropiesforkey)
+            print("Atribute: ",key)
+            print("Entropy: ",entropiesforkey)
             # print("Decisions: ",decistions)
-            # print("Conditional entropy: ",conditional_entropy(entropiesforkey,decistions))
-            # print("Information gain for ",key,": ",information_gain(mainentropy,conditional_entropy(entropiesforkey,decistions)),"\n")
-        
+            print("Conditional entropy: ",conditional_entropy(entropiesforkey,decistions))
+            print("Information gain for ",key,": ",information_gain(mainentropy,conditional_entropy(entropiesforkey,decistions)))
+            print("Gain ratio for ",key,": ",gain_ratio(information_gain(mainentropy,conditional_entropy(entropiesforkey,decistions)),intrinsic_info(decistions)))
+        print("\n------------------------------------------------------------------\n")
+
         for (attr_val, list) in best_lists:
             rows = remove_attribute(list, best_key)
 
@@ -174,16 +166,13 @@ def main():
                 node_child = TreeNode(best_key, attr_val, rows, node)
                 nodes_to_expand.append(node_child)
                 node.children.append(node_child)
-
     
     display_tree = treelib.Tree()
-
     display_tree.add_node(treelib.Node(f"{tree.key}:{tree.attr_value}", 1), None)
     tree.num = 1
-
     nodes_to_display = tree.children
-
     num = 2
+
     while len(nodes_to_display) >  0:
         
         node = nodes_to_display.pop()
@@ -194,28 +183,5 @@ def main():
 
     display_tree.save2file("tree")
 
-    # for i in range(5):
-    #     best=get_best_attribute(TitanicData)
-    #     print(best)
-    #     # print_dict(create_dict(TitanicData,best))
-    #     remove_attribute(TitanicData,best)
-    
-''' dane dla 10 pierwszych rekordów (są one w tym LabExe.csv)
-Age[young,middle,old]
-Age[2,7,1]
-Age[yes:1 no:1 ; yes:4 no:3; yes:0 no:1] 
-
-PassengerId,Pclass,Name,Sex,Age,SibSp,Parch,Survived
-1,3,"Braund, Mr. Owen Harris",male,22,1,0,0
-2,1,"Cumings, Mrs. John Bradley (Florence Briggs Thayer)",female,38,1,0,1
-3,3,"Heikkinen, Miss. Laina",female,26,0,0,1
-4,1,"Futrelle, Mrs. Jacques Heath (Lily May Peel)",female,35,1,0,1
-5,3,"Allen, Mr. William Henry",male,35,0,0,0
-6,3,"Moran, Mr. James",male,34,0,0,0
-7,1,"McCarthy, Mr. Timothy J",male,54,0,0,0
-8,3,"Palsson, Master. Gosta Leonard",male,2,3,1,0
-9,3,"Johnson, Mrs. Oscar W (Elisabeth Vilhelmina Berg)",female,27,0,2,1
-10,2,"Nasser, Mrs. Nicholas (Adele Achem)",female,14,1,0,1
-'''
 
 main()
