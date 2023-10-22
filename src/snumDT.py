@@ -68,7 +68,56 @@ def split_list_by_attr(list, attr):
     for value in distinct_values:
         lists.append((value, [row for row in list if row[attr] == value]))
 
-    return lists    
+    return lists
+
+# splits list into two lists: with attr < split_point and with attr >= split_point
+def split_list_by_continuous_attr(list, attr, split_point, only_integer_values=True):
+    if only_integer_values:            
+        list_lower = [row for row in list if int(row[attr]) < split_point]
+        list_greater_equal = [row for row in list if int(row[attr]) >= split_point]
+    else:
+        list_lower = [row for row in list if float(row[attr]) < split_point]
+        list_greater_equal = [row for row in list if float(row[attr]) >= split_point]
+
+    return [list_lower,  list_greater_equal]
+
+def best_split_list_by_continuous_attr(list, attr, desision_attr, only_integer_values=True):
+    sorted_list = None
+    if only_integer_values:
+        sorted_list = sorted(list, key = lambda x: int(x[attr]))
+    else:
+        sorted_list = sorted(list, key = lambda x: float(x[attr]))
+
+    change_points = []
+    last_decision = None
+    for row in sorted_list:
+        if last_decision != row[desision_attr] and last_decision != None:
+            change_points.append(int(row[attr]) if only_integer_values else float(row[attr]))
+        last_decision = row[desision_attr]
+
+    best_split_point = None
+    best_entropy = 2
+    for point in change_points:
+        lists = split_list_by_continuous_attr(sorted_list, attr, point, only_integer_values=only_integer_values)
+        entropies = []
+        size_rat = []
+        for sub_list in lists:
+            entropies.append(entropy(get_decision_prob(sub_list , desision_attr)))
+            size_rat.append(len(sub_list) / len(sorted_list))
+            
+        cond_entropy = conditional_entropy(entropies, size_rat)
+
+        if cond_entropy < best_entropy:
+            best_entropy = cond_entropy
+            best_split_point = point
+
+    best_split = split_list_by_continuous_attr(sorted_list, attr, best_split_point, only_integer_values=only_integer_values)
+
+    return [(f"<{best_split_point}", best_split[0]), (f">={best_split_point}", best_split[1])]
+
+    
+    
+
 
 def get_decision_prob(list, decision_attr):
     decision_classes = set([row[decision_attr] for row in list])
@@ -101,6 +150,8 @@ def intrinsic_info(decisions):
     return -intrinsicinfo
 
 def gain_ratio(informationgain,informationratio):
+    if informationratio == 0:
+        return 0
     return informationgain/informationratio
 
 def main():
@@ -111,14 +162,14 @@ def main():
     TitanicData=read_csv_file(data_folder + 'titanic-homework.csv')
     # TitanicData=read_csv_file(data_folder +  'laborkiP.csv')
 
-    for i in range(len(TitanicData)):
-        if TitanicData[i]['Age'] <='20':
-            TitanicData[i]['Age'] = 'young'
-            continue
-        if TitanicData[i]['Age'] <='40':
-            TitanicData[i]['Age'] = 'middle'
-            continue
-        TitanicData[i]['Age'] = 'old'
+    # for i in range(len(TitanicData)):
+    #     if TitanicData[i]['Age'] <='20':
+    #         TitanicData[i]['Age'] = 'young'
+    #         continue
+    #     if TitanicData[i]['Age'] <='40':
+    #         TitanicData[i]['Age'] = 'middle'
+    #         continue
+    #     TitanicData[i]['Age'] = 'old'
 
 
     # decision_attribute = "decision"
@@ -126,6 +177,7 @@ def main():
 
     decision_attribute = "Survived"
     skip_attributes = ("Name","PassengerId", decision_attribute)
+    continuous_attributes = ("Age")
     tree = TreeNode("titanic", "", TitanicData)
 
     nodes_to_expand = [tree]
@@ -142,7 +194,13 @@ def main():
         for key in node.rows[0].keys():
             if key in skip_attributes:
                 continue
-            lists = split_list_by_attr(node.rows, key)
+            
+            lists = None
+            if key in continuous_attributes:
+                lists = best_split_list_by_continuous_attr(node.rows, key, decision_attribute)
+            else:
+                lists = split_list_by_attr(node.rows, key)
+
             entropiesforkey=[]
             decistions = []
             for (attr_val, list) in lists:
