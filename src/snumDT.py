@@ -15,6 +15,15 @@ class TreeNode:
 
         self.num = 0
 
+    def get_path_to_root(self, path_separator = "/"):
+        path = f"{path_separator}{self.key}[{self.attr_value}]"
+        next = self.parent
+        while next != None:
+            path = f"{path_separator}{next.key}[{next.attr_value}]{path}"
+            next = next.parent
+
+        return path
+
 
 
 def read_csv_file(file_path):
@@ -95,9 +104,12 @@ def gain_ratio(informationgain,informationratio):
     return informationgain/informationratio
 
 def main():
-    # TitanicData=read_csv_file('data\\LabExe.csv')
-    TitanicData=read_csv_file('data\\titanic-homework.csv')
-    # TitanicData=read_csv_file('data\\laborkiP.csv')
+    # data_folder = "data\\"
+    data_folder = "..\\data\\"
+
+    # TitanicData=read_csv_file(data_folder + 'LabExe.csv')
+    TitanicData=read_csv_file(data_folder + 'titanic-homework.csv')
+    # TitanicData=read_csv_file(data_folder +  'laborkiP.csv')
 
     for i in range(len(TitanicData)):
         if TitanicData[i]['Age'] <='20':
@@ -137,21 +149,22 @@ def main():
                 entropiesforkey.append(entropy(get_decision_prob(list , decision_attribute)))
                 decistions.append(len(list) / len(node.rows))
             
-            cond_entropy = conditional_entropy(entropiesforkey,decistions)
+            cond_entropy = conditional_entropy(entropiesforkey, decistions)
             inf_gain = information_gain(mainentropy, cond_entropy)
             info_ratio=intrinsic_info(decistions)
-            gain_rat=gain_ratio(inf_gain,info_ratio)
+            gain_rat=gain_ratio(inf_gain, info_ratio)
 
             if(gain_rat >= best_gain):
                 best_gain = gain_rat
                 best_key = key
                 best_lists = lists
-            print("Atribute: ",key)
-            print("Entropy: ",entropiesforkey)
+            print("Path: ", node.get_path_to_root())
+            print("Atribute: ", key)
+            print("Entropy: ", entropiesforkey)
             # print("Decisions: ",decistions)
-            print("Conditional entropy: ",conditional_entropy(entropiesforkey,decistions))
-            print("Information gain for ",key,": ",information_gain(mainentropy,conditional_entropy(entropiesforkey,decistions)))
-            print("Gain ratio for ",key,": ",gain_ratio(information_gain(mainentropy,conditional_entropy(entropiesforkey,decistions)),intrinsic_info(decistions)))
+            print("Conditional entropy: ", cond_entropy)
+            print("Information gain for ", key, ": ", inf_gain)
+            print("Gain ratio for ", key, ": ", gain_rat)
         print("\n------------------------------------------------------------------\n")
 
         for (attr_val, list) in best_lists:
